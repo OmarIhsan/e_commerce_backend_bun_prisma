@@ -1,5 +1,5 @@
 {
-  "name": "e-commerce-backend-bun-prisma",
+  "name": "e_commerce_mock_bakend_bunjsandprisma",
   "version": "1.0.0",
   "description": "High-performance E-Commerce Backend powered by Bun.js, Elysia.js, and Prisma ORM",
   "main": "src/index.ts",
