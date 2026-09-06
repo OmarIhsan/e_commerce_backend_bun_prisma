@@ -1,0 +1,30 @@
+{
+  "name": "e-commerce-backend-bun-prisma",
+  "version": "1.0.0",
+  "description": "High-performance E-Commerce Backend powered by Bun.js, Elysia.js, and Prisma ORM",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "test": "bun test",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "prisma:validate": "prisma validate",
+    "prisma:format": "prisma format"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.2.0",
+    "@elysiajs/jwt": "^1.2.0",
+    "@elysiajs/swagger": "^1.2.0",
+    "@prisma/client": "^6.4.1",
+    "elysia": "^1.2.22"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prisma": "^6.4.1",
+    "typescript": "^5.7.3"
+  }
+}

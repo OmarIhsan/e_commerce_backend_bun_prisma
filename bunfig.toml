@@ -1,0 +1,12 @@
+[test]
+# Configure Bun's native test runner
+root = "."
+coverage = true
+
+[install]
+production = false
+frozenLockfile = false
+
+[run]
+# Hot reload in development
+watch = true
