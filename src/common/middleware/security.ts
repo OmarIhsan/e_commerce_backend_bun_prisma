@@ -25,7 +25,7 @@ class MemoryRateLimiter {
 
   constructor() {
     // Evict expired tracking buckets every 60 seconds to prevent memory leaks
-    setInterval(() => {
+    const cleanupInterval = setInterval(() => {
       const now = Date.now();
       for (const [key, record] of this.store.entries()) {
         if (now > record.resetAt) {
@@ -33,6 +33,7 @@ class MemoryRateLimiter {
         }
       }
     }, 60_000);
+    cleanupInterval.unref?.();
   }
 
   check(
@@ -117,7 +118,7 @@ export const securityHeadersPlugin = new Elysia({ name: 'security-headers' })
     set.headers['X-XSS-Protection'] = '1; mode=block';
     set.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin';
     set.headers['Cross-Origin-Opener-Policy'] = 'same-origin';
-    set.headers['Cross-Origin-Resource-Policy'] = 'same-origin';
+    set.headers['Cross-Origin-Resource-Policy'] = 'cross-origin';
 
     if (env.NODE_ENV === 'production') {
       set.headers['Strict-Transport-Security'] =

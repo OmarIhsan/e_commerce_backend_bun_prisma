@@ -33,8 +33,6 @@ describe('Order & Checkout Pipeline', () => {
   });
 
   it('POST /api/v1/orders/checkout rejects malformed payload (invalid UUID / quantity 0) with 422', async () => {
-    // Generate a valid JWT token using the app's jwt plugin instance
-    const dummyJwtResponse = await fetch('http://localhost:3000/health');
     // Call endpoint with invalid payload
     const response = await app.handle(
       new Request('http://localhost:3000/api/v1/orders/checkout', {

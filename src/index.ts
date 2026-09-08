@@ -1,5 +1,4 @@
 import { Elysia } from 'elysia';
-import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
 import { jwt } from '@elysiajs/jwt';
 import { prisma } from './db/prisma';
@@ -8,7 +7,68 @@ import { AppError } from './common/errors/app-error';
 import { securityHeadersPlugin } from './common/middleware/security';
 import { orderRoutes } from './modules/orders/order.routes';
 
-// Initialize Elysia application with Bun runtime optimization
+// ============================================================================
+// Dynamic Multi-Origin CORS Configuration & Preflight Interceptor
+// ============================================================================
+
+const ALLOWED_ORIGINS = new Set<string>([
+  'https://e-commerce-admin-next-beta.vercel.app',
+  'https://e-commerce-frontend-next-ashy.vercel.app',
+]);
+
+const DEV_ORIGINS = new Set<string>([
+  'http://localhost:3000',
+  'http://localhost:3001',
+]);
+
+// Dynamically ingest custom CORS origins defined in environment variables
+if (env.CORS_ORIGIN && env.CORS_ORIGIN !== '*') {
+  env.CORS_ORIGIN.split(',').forEach((origin) => {
+    const trimmed = origin.trim();
+    if (trimmed) ALLOWED_ORIGINS.add(trimmed);
+  });
+}
+
+/**
+ * Validates whether the incoming Origin header is permitted.
+ */
+export function isOriginAllowed(origin: string | null): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  if (env.NODE_ENV !== 'production' && DEV_ORIGINS.has(origin)) return true;
+  return false;
+}
+
+/**
+ * Builds standard CORS headers for allowed origins.
+ */
+export function buildCorsHeaders(
+  origin: string | null,
+  requestedHeaders?: string | null
+): Headers {
+  const headers = new Headers();
+  if (origin && isOriginAllowed(origin)) {
+    headers.set('Access-Control-Allow-Origin', origin);
+    headers.set('Access-Control-Allow-Credentials', 'true');
+    headers.set(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD'
+    );
+    headers.set(
+      'Access-Control-Allow-Headers',
+      requestedHeaders ||
+        'Content-Type, Authorization, Accept, Origin, X-Requested-With'
+    );
+    headers.set('Access-Control-Max-Age', '86400');
+    headers.set('Vary', 'Origin');
+  }
+  return headers;
+}
+
+// ============================================================================
+// Elysia Application Routing Engine
+// ============================================================================
+
 export const app = new Elysia()
   // Global Security Headers
   .use(securityHeadersPlugin)
@@ -64,19 +124,6 @@ export const app = new Elysia()
         };
     }
   })
-
-  // Global CORS Middleware with strict origin control in production
-  .use(
-    cors({
-      origin:
-        env.NODE_ENV === 'production' && env.CORS_ORIGIN !== '*'
-          ? env.CORS_ORIGIN.split(',').map((o) => o.trim())
-          : true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-      credentials: true,
-    })
-  )
 
   // Native Bun JWT Plugin
   .use(
@@ -139,14 +186,68 @@ export const app = new Elysia()
   })
 
   // Register Feature Domain Routes
-  .use(orderRoutes)
+  .use(orderRoutes);
 
-  // Start HTTP Listener
-  .listen(env.PORT);
+// ============================================================================
+// Native Bun HTTP Server Dispatcher
+// ============================================================================
 
-console.log(
-  `🚀 E-Commerce API running at http://${app.server?.hostname}:${app.server?.port}`
-);
-console.log(
-  `📚 Swagger documentation available at http://${app.server?.hostname}:${app.server?.port}/docs`
-);
+/**
+ * Request handler wrapping Elysia routing with native preflight and dynamic CORS injection
+ */
+export async function handleRequest(req: Request): Promise<Response> {
+  const origin = req.headers.get('origin');
+  const allowed = isOriginAllowed(origin);
+
+  // 1. Intercept all OPTIONS preflight requests immediately
+  if (req.method === 'OPTIONS') {
+    const acrh = req.headers.get('access-control-request-headers');
+    const preflightHeaders = buildCorsHeaders(origin, acrh);
+    return new Response(null, {
+      status: 204,
+      headers: preflightHeaders,
+    });
+  }
+
+  // 2. Delegate regular requests to the Elysia routing engine
+  const response = await app.fetch(req);
+
+  // 3. Inject CORS headers on standard API responses
+  if (allowed && origin) {
+    try {
+      response.headers.set('Access-Control-Allow-Origin', origin);
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
+      response.headers.set('Vary', 'Origin');
+    } catch {
+      const headers = new Headers(response.headers);
+      headers.set('Access-Control-Allow-Origin', origin);
+      headers.set('Access-Control-Allow-Credentials', 'true');
+      headers.set('Vary', 'Origin');
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    }
+  }
+
+  return response;
+}
+
+// Start HTTP Listener via native Bun.serve() when not running tests
+export const server =
+  process.env.NODE_ENV !== 'test'
+    ? Bun.serve({
+        port: env.PORT,
+        fetch: handleRequest,
+      })
+    : undefined;
+
+if (server) {
+  console.log(
+    `🚀 E-Commerce API running at http://${server.hostname}:${server.port}`
+  );
+  console.log(
+    `📚 Swagger documentation available at http://${server.hostname}:${server.port}/docs`
+  );
+}
