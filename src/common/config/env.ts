@@ -6,6 +6,14 @@ export const env = {
   DATABASE_URL:
     Bun.env.DATABASE_URL ??
     'postgresql://postgres:postgres@localhost:5432/ecommerce_db?schema=public&connection_limit=10&pool_timeout=10',
+  DIRECT_URL:
+    Bun.env.DIRECT_URL ??
+    Bun.env.DATABASE_URL ??
+    'postgresql://postgres:postgres@localhost:5432/ecommerce_db?schema=public',
+  AUTO_BOOTSTRAP_DB:
+    Bun.env.AUTO_BOOTSTRAP_DB !== undefined
+      ? Bun.env.AUTO_BOOTSTRAP_DB === 'true'
+      : true,
   JWT_SECRET:
     Bun.env.JWT_SECRET ??
     'super_secret_jwt_key_for_bun_ecommerce_2026_production_ready',

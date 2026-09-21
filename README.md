@@ -69,14 +69,31 @@ Copy `.env.example` to `.env` and configure your database connection and secrets
 cp .env.example .env
 ```
 
-### 4. Database Setup
+#### Neon Serverless PostgreSQL Dual-Connection Setup:
+Configure both connection strings in `.env`:
+* **`DATABASE_URL`**: Pooled connection (`pgbouncer=true`) for fast runtime transactions.
+  `postgresql://[user]:[password]@[endpoint]-pooler.[region].neon.tech/[dbname]?sslmode=require&pgbouncer=true`
+* **`DIRECT_URL`**: Direct unpooled connection (port 5432) for migrations and DDL operations.
+  `postgresql://[user]:[password]@[endpoint].[region].neon.tech/[dbname]?sslmode=require`
+
+### 4. Database Setup & Self-Provisioning Engine
+This backend template is equipped with a zero-touch self-provisioning engine that automatically wakes suspended Neon computes, runs schema synchronization/migrations, and seeds baseline catalogs:
+
 ```bash
+# Automated Self-Provisioning (Health check + Migrations + Baseline Catalog Seed)
+bun run db:bootstrap
+
+# Manual Baseline Seeding
+bun run db:seed
+
 # Generate Prisma Client
 bun run prisma:generate
 
-# Run Migrations
-bun run prisma:migrate
+# Deploy Migrations
+bun run prisma:deploy
 ```
+
+> **Zero-Ops Startup:** When `AUTO_BOOTSTRAP_DB=true` (default), simply starting the application (`bun run dev` or `bun run start`) automatically handles complete database self-provisioning.
 
 ### 5. Running the Application
 ```bash

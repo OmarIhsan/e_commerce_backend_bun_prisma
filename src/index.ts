@@ -6,6 +6,7 @@ import { env } from './common/config/env';
 import { AppError } from './common/errors/app-error';
 import { securityHeadersPlugin } from './common/middleware/security';
 import { orderRoutes } from './modules/orders/order.routes';
+import { bootstrapDatabase } from './db/bootstrap';
 
 // ============================================================================
 // Dynamic Multi-Origin CORS Configuration & Preflight Interceptor
@@ -232,6 +233,18 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   return response;
+}
+
+// Self-provision database on startup if enabled and not in test suite
+if (process.env.NODE_ENV !== 'test' && env.AUTO_BOOTSTRAP_DB) {
+  try {
+    await bootstrapDatabase();
+  } catch (error) {
+    console.error('Failed to auto-bootstrap database on startup:', error);
+    if (env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
+  }
 }
 
 // Start HTTP Listener via native Bun.serve() when not running tests

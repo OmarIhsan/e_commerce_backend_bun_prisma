@@ -19,6 +19,7 @@ RUN bun install --frozen-lockfile
 
 # Generate Prisma Client specifically for the Alpine Linux runtime
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder?schema=public"
+ENV DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder?schema=public"
 RUN bun x prisma generate
 
 # Copy application source code
