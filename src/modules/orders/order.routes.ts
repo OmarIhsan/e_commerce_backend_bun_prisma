@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { authPlugin, requireAuth } from '../../common/middleware/auth';
+import { authPlugin, requireAuth, requireAdmin } from '../../common/middleware/auth';
 import { sensitiveEndpointRateLimit } from '../../common/middleware/security';
 import { prisma } from '../../db/prisma';
 import { OrderService } from './order.service';
@@ -12,6 +12,39 @@ const orderService = new OrderService(prisma);
 
 export const orderRoutes = new Elysia({ prefix: '/api/v1/orders' })
   .use(authPlugin)
+
+  /**
+   * GET /api/v1/orders
+   * Retrieves order list with filtering, search, and pagination.
+   * Admins can view all orders; customers only their own.
+   */
+  .get(
+    '/',
+    async ({ user, query }) => {
+      const isAdmin = user!.role === 'ADMIN';
+      const result = await orderService.listOrders(query, user!.id, isAdmin);
+      return {
+        success: true,
+        ...result,
+      };
+    },
+    {
+      beforeHandle: [requireAuth],
+      query: t.Object({
+        status: t.Optional(t.String()),
+        paymentStatus: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+        page: t.Optional(t.Numeric({ default: 1, minimum: 1 })),
+        limit: t.Optional(t.Numeric({ default: 50, minimum: 1, maximum: 100 })),
+      }),
+      detail: {
+        tags: ['Orders'],
+        summary: 'List orders (filtered by owner unless Admin)',
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  )
+
   /**
    * POST /api/v1/orders/checkout
    * Executes atomic checkout with pessimistic inventory locking
@@ -74,6 +107,43 @@ export const orderRoutes = new Elysia({ prefix: '/api/v1/orders' })
         summary: 'Retrieve order by ID',
         description:
           'Fetches details of a specific order for the authenticated owner or admin.',
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  )
+
+  /**
+   * PATCH /api/v1/orders/:id/status
+   * Updates fulfillment or payment status (Admin only)
+   */
+  .patch(
+    '/:id/status',
+    async ({ params, body }) => {
+      const updated = await orderService.updateOrderStatus(
+        params.id,
+        body.status,
+        body.paymentStatus
+      );
+
+      return {
+        success: true,
+        message: 'Order status updated successfully',
+        data: updated,
+        order: updated,
+      };
+    },
+    {
+      beforeHandle: [requireAuth, requireAdmin],
+      params: t.Object({
+        id: t.String({ format: 'uuid', description: 'Order UUID' }),
+      }),
+      body: t.Object({
+        status: t.Optional(t.String()),
+        paymentStatus: t.Optional(t.String()),
+      }),
+      detail: {
+        tags: ['Orders'],
+        summary: 'Update order fulfillment or payment status (Admin only)',
         security: [{ bearerAuth: [] }],
       },
     }

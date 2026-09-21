@@ -203,4 +203,161 @@ export class OrderService {
 
     return order;
   }
+
+  /**
+   * Lists orders with filtering, pagination, and role-based access control.
+   */
+  async listOrders(
+    query: {
+      status?: string;
+      paymentStatus?: string;
+      search?: string;
+      page?: number;
+      limit?: number;
+    } = {},
+    requestingUserId: string,
+    isAdmin: boolean
+  ) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.OrderWhereInput = {};
+
+    // Customer can only view their own orders; Admin views all
+    if (!isAdmin) {
+      where.userId = requestingUserId;
+    }
+
+    if (query.status) {
+      where.status = query.status.toUpperCase() as any;
+    }
+
+    if (query.paymentStatus) {
+      where.paymentStatus = query.paymentStatus.toUpperCase() as any;
+    }
+
+    if (query.search) {
+      where.OR = [
+        { orderNumber: { contains: query.search, mode: 'insensitive' } },
+        { user: { name: { contains: query.search, mode: 'insensitive' } } },
+        { user: { email: { contains: query.search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [total, orders] = await Promise.all([
+      this.prisma.order.count({ where }),
+      this.prisma.order.findMany({
+        where,
+        include: {
+          user: {
+            select: { id: true, name: true, email: true },
+          },
+          items: {
+            include: {
+              product: {
+                select: { id: true, name: true, slug: true, sku: true },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const formatted = orders.map((o) => ({
+      id: o.id,
+      orderNumber: o.orderNumber,
+      createdAt: o.createdAt.toISOString(),
+      updatedAt: o.updatedAt.toISOString(),
+      customer: {
+        id: o.user.id,
+        name: o.user.name,
+        email: o.user.email,
+      },
+      totalAmount: Number(o.totalAmount),
+      paymentStatus: o.paymentStatus,
+      fulfillmentStatus: o.status,
+      status: o.status,
+      itemsCount: o.items.length,
+      items: o.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.product?.name,
+        productSku: item.product?.sku,
+        quantity: item.quantity,
+        unitPrice: Number(item.unitPrice),
+        subtotal: Number(item.subtotal),
+      })),
+      shippingAddress: o.shippingAddress,
+    }));
+
+    return {
+      orders: formatted,
+      data: formatted,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Updates an order's fulfillment status or payment status (Admin only).
+   */
+  async updateOrderStatus(
+    orderId: string,
+    status?: string,
+    paymentStatus?: string
+  ) {
+    const existing = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!existing) {
+      throw new NotFoundError(`Order with ID "${orderId}" not found`);
+    }
+
+    const data: Prisma.OrderUpdateInput = {};
+    if (status) {
+      data.status = status.toUpperCase() as any;
+    }
+    if (paymentStatus) {
+      data.paymentStatus = paymentStatus.toUpperCase() as any;
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        items: {
+          include: {
+            product: { select: { id: true, name: true, slug: true, sku: true } },
+          },
+        },
+      },
+    });
+
+    return {
+      id: updated.id,
+      orderNumber: updated.orderNumber,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+      customer: {
+        id: updated.user.id,
+        name: updated.user.name,
+        email: updated.user.email,
+      },
+      totalAmount: Number(updated.totalAmount),
+      paymentStatus: updated.paymentStatus,
+      fulfillmentStatus: updated.status,
+      status: updated.status,
+      itemsCount: updated.items.length,
+      items: updated.items,
+      shippingAddress: updated.shippingAddress,
+    };
+  }
 }

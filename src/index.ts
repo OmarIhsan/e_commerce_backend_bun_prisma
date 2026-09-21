@@ -6,6 +6,10 @@ import { AppError } from './common/errors/app-error';
 import { securityHeadersPlugin } from './common/middleware/security';
 import { orderRoutes } from './modules/orders/order.routes';
 import { authRoutes } from './modules/auth/auth.routes';
+import { productRoutes } from './modules/products/product.routes';
+import { categoryRoutes } from './modules/categories/category.routes';
+import { analyticsRoutes } from './modules/analytics/analytics.routes';
+import { userRoutes } from './modules/users/user.routes';
 import { bootstrapDatabase } from './db/bootstrap';
 
 // ============================================================================
@@ -180,7 +184,11 @@ export const app = new Elysia()
 
   // Register Feature Domain Routes
   .use(authRoutes)
-  .use(orderRoutes);
+  .use(orderRoutes)
+  .use(productRoutes)
+  .use(categoryRoutes)
+  .use(analyticsRoutes)
+  .use(userRoutes);
 
 // ============================================================================
 // Native Bun HTTP Server Dispatcher
