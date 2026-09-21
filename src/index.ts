@@ -6,6 +6,7 @@ import { env } from './common/config/env';
 import { AppError } from './common/errors/app-error';
 import { securityHeadersPlugin } from './common/middleware/security';
 import { orderRoutes } from './modules/orders/order.routes';
+import { authRoutes } from './modules/auth/auth.routes';
 import { bootstrapDatabase } from './db/bootstrap';
 
 // ============================================================================
@@ -130,8 +131,11 @@ export const app = new Elysia()
   .use(
     jwt({
       name: 'jwt',
-      secret: env.JWT_SECRET,
-      exp: env.JWT_EXPIRES_IN,
+      secret:
+        env.JWT_SECRET && env.JWT_SECRET.trim() !== ''
+          ? env.JWT_SECRET.trim()
+          : 'super_secret_jwt_key_for_bun_ecommerce_2026_production_ready',
+      exp: env.JWT_EXPIRES_IN || '7d',
     })
   )
 
@@ -187,6 +191,7 @@ export const app = new Elysia()
   })
 
   // Register Feature Domain Routes
+  .use(authRoutes)
   .use(orderRoutes);
 
 // ============================================================================

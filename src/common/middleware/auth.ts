@@ -54,12 +54,17 @@ export const requireAdmin = ({
  * Validates cryptographic signature directly via Bun's fast native crypto.
  * Attaches verified { user: AuthenticatedUser | null } to the scoped request context.
  */
+const jwtSecret =
+  (env.JWT_SECRET && env.JWT_SECRET.trim() !== '')
+    ? env.JWT_SECRET.trim()
+    : 'super_secret_jwt_key_for_bun_ecommerce_2026_production_ready';
+
 export const authPlugin = new Elysia({ name: 'auth-plugin' })
   .use(
     jwt({
       name: 'jwt',
-      secret: env.JWT_SECRET,
-      exp: env.JWT_EXPIRES_IN,
+      secret: jwtSecret,
+      exp: env.JWT_EXPIRES_IN || '7d',
     })
   )
   .derive({ as: 'scoped' }, async ({ jwt, headers }) => {
