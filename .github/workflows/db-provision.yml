@@ -1,0 +1,42 @@
+name: Neon Database Self-Provisioning & Seeding
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'prisma/**'
+      - 'src/db/**'
+      - '.github/workflows/db-provision.yml'
+  workflow_dispatch:
+
+jobs:
+  provision-database:
+    name: Provision & Seed Neon Database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun Runtime
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Project Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: bun run prisma:generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      - name: Execute Self-Provisioning Engine (Cold-Start Ping + Schema Sync + Seed)
+        run: bun run db:bootstrap
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          NODE_ENV: production
+          AUTO_BOOTSTRAP_DB: "true"
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
