@@ -15,7 +15,7 @@ describe('Database Self-Provisioning Engine Unit Tests', () => {
     expect(typeof bootstrapDatabase).toBe('function');
   });
 
-  it('seedCatalog function is exported and callable', () => {
+  it('seedCatalog and main functions are exported and callable', () => {
     expect(typeof seedCatalog).toBe('function');
   });
 });
