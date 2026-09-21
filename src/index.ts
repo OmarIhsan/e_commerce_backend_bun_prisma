@@ -235,8 +235,12 @@ export async function handleRequest(req: Request): Promise<Response> {
   return response;
 }
 
-// Self-provision database on startup if enabled and not in test suite
-if (process.env.NODE_ENV !== 'test' && env.AUTO_BOOTSTRAP_DB) {
+// Self-provision database on startup if enabled, not in test suite, and not in Vercel serverless functions
+if (
+  process.env.NODE_ENV !== 'test' &&
+  !process.env.VERCEL &&
+  env.AUTO_BOOTSTRAP_DB
+) {
   try {
     await bootstrapDatabase();
   } catch (error) {
@@ -247,9 +251,9 @@ if (process.env.NODE_ENV !== 'test' && env.AUTO_BOOTSTRAP_DB) {
   }
 }
 
-// Start HTTP Listener via native Bun.serve() when not running tests
+// Start HTTP Listener via native Bun.serve() when running in standalone server mode (not in test or Vercel serverless)
 export const server =
-  process.env.NODE_ENV !== 'test'
+  process.env.NODE_ENV !== 'test' && !process.env.VERCEL
     ? Bun.serve({
         port: env.PORT,
         fetch: handleRequest,
@@ -264,3 +268,6 @@ if (server) {
     `📚 Swagger documentation available at http://${server.hostname}:${server.port}/docs`
   );
 }
+
+// Default export for Vercel Serverless Function & Edge Runtime integration
+export default app;
