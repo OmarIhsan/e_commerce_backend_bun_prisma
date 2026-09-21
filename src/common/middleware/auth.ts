@@ -59,14 +59,18 @@ const jwtSecret =
     ? env.JWT_SECRET.trim()
     : 'super_secret_jwt_key_for_bun_ecommerce_2026_production_ready';
 
+/**
+ * Canonical JWT Plugin instance
+ * Reused across auth routes and middleware to avoid duplicate decorator collisions
+ */
+export const jwtPlugin = jwt({
+  name: 'jwt',
+  secret: jwtSecret,
+  exp: env.JWT_EXPIRES_IN || '7d',
+});
+
 export const authPlugin = new Elysia({ name: 'auth-plugin' })
-  .use(
-    jwt({
-      name: 'jwt',
-      secret: jwtSecret,
-      exp: env.JWT_EXPIRES_IN || '7d',
-    })
-  )
+  .use(jwtPlugin)
   .derive({ as: 'scoped' }, async ({ jwt, headers }) => {
     const authHeader = headers['authorization'];
 

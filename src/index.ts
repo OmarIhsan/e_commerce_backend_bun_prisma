@@ -1,10 +1,10 @@
 import { Elysia } from 'elysia';
 import { swagger } from '@elysiajs/swagger';
-import { jwt } from '@elysiajs/jwt';
 import { prisma } from './db/prisma';
 import { env } from './common/config/env';
 import { AppError } from './common/errors/app-error';
 import { securityHeadersPlugin } from './common/middleware/security';
+import { jwtPlugin } from './common/middleware/auth';
 import { orderRoutes } from './modules/orders/order.routes';
 import { authRoutes } from './modules/auth/auth.routes';
 import { bootstrapDatabase } from './db/bootstrap';
@@ -127,17 +127,8 @@ export const app = new Elysia()
     }
   })
 
-  // Native Bun JWT Plugin
-  .use(
-    jwt({
-      name: 'jwt',
-      secret:
-        env.JWT_SECRET && env.JWT_SECRET.trim() !== ''
-          ? env.JWT_SECRET.trim()
-          : 'super_secret_jwt_key_for_bun_ecommerce_2026_production_ready',
-      exp: env.JWT_EXPIRES_IN || '7d',
-    })
-  )
+  // Shared JWT Plugin
+  .use(jwtPlugin)
 
   // OpenAPI / Swagger Documentation
   .use(

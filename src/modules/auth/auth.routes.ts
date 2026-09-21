@@ -1,23 +1,9 @@
 import { Elysia, t } from 'elysia';
-import { jwt } from '@elysiajs/jwt';
 import { prisma } from '../../db/prisma';
-import { env } from '../../common/config/env';
 import { authPlugin, requireAuth } from '../../common/middleware/auth';
 import { UnauthorizedError, ConflictError } from '../../common/errors/app-error';
 
-const jwtSecret =
-  env.JWT_SECRET && env.JWT_SECRET.trim() !== ''
-    ? env.JWT_SECRET.trim()
-    : 'super_secret_jwt_key_for_bun_ecommerce_2026_production_ready';
-
 export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
-  .use(
-    jwt({
-      name: 'jwt',
-      secret: jwtSecret,
-      exp: env.JWT_EXPIRES_IN || '7d',
-    })
-  )
   .use(authPlugin)
   /**
    * POST /api/v1/auth/login
