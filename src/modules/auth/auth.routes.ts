@@ -37,18 +37,22 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
         role: user.role,
       });
 
+      const userPayload = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      };
+
       set.status = 200;
       return {
+        token,
+        user: userPayload,
         success: true,
         message: 'Authentication successful',
         data: {
           token,
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          },
+          user: userPayload,
         },
       };
     },
@@ -101,18 +105,22 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
         role: user.role,
       });
 
+      const userPayload = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      };
+
       set.status = 201;
       return {
+        token,
+        user: userPayload,
         success: true,
         message: 'User registered successfully',
         data: {
           token,
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          },
+          user: userPayload,
         },
       };
     },
@@ -139,6 +147,7 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
       return {
         success: true,
         data: user,
+        user,
       };
     },
     {

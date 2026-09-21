@@ -54,10 +54,21 @@ export const requireAdmin = ({
  * Validates cryptographic signature directly via Bun's fast native crypto.
  * Attaches verified { user: AuthenticatedUser | null } to the scoped request context.
  */
-const jwtSecret =
-  (env.JWT_SECRET && env.JWT_SECRET.trim() !== '')
-    ? env.JWT_SECRET.trim()
-    : 'super_secret_jwt_key_for_bun_ecommerce_2026_production_ready';
+const resolvedJwtSecret = (() => {
+  const candidates = [
+    typeof Bun !== 'undefined' ? Bun.env?.JWT_SECRET : undefined,
+    process.env.JWT_SECRET,
+    process.env.JWT_SECRETS,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  return 'ecommerce_production_secure_fallback_secret_key_2026_x99';
+})();
 
 /**
  * Canonical JWT Plugin instance
@@ -65,12 +76,18 @@ const jwtSecret =
  */
 export const jwtPlugin = jwt({
   name: 'jwt',
-  secret: jwtSecret,
-  exp: env.JWT_EXPIRES_IN || '7d',
+  secret: resolvedJwtSecret,
+  exp: process.env.JWT_EXPIRES_IN || env.JWT_EXPIRES_IN || '7d',
 });
 
 export const authPlugin = new Elysia({ name: 'auth-plugin' })
-  .use(jwtPlugin)
+  .use(
+    jwt({
+      name: 'jwt',
+      secret: resolvedJwtSecret,
+      exp: process.env.JWT_EXPIRES_IN || '7d',
+    })
+  )
   .derive({ as: 'scoped' }, async ({ jwt, headers }) => {
     const authHeader = headers['authorization'];
 

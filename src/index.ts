@@ -4,7 +4,6 @@ import { prisma } from './db/prisma';
 import { env } from './common/config/env';
 import { AppError } from './common/errors/app-error';
 import { securityHeadersPlugin } from './common/middleware/security';
-import { jwtPlugin } from './common/middleware/auth';
 import { orderRoutes } from './modules/orders/order.routes';
 import { authRoutes } from './modules/auth/auth.routes';
 import { bootstrapDatabase } from './db/bootstrap';
@@ -127,8 +126,6 @@ export const app = new Elysia()
     }
   })
 
-  // Shared JWT Plugin
-  .use(jwtPlugin)
 
   // OpenAPI / Swagger Documentation
   .use(

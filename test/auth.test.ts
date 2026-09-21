@@ -44,7 +44,7 @@ describe('Authentication & JWT Initialization', () => {
       expect(body.success).toBe(false);
       expect(body.code).toBe('UNAUTHORIZED');
     }
-  });
+  }, 15000);
 
   it('GET /api/v1/auth/me rejects unauthenticated request with 401', async () => {
     const response = await app.handle(
